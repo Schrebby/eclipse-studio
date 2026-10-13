@@ -1,0 +1,107 @@
+# =====================================================================
+#  Éclipse Studio — construction automatique des versions installables
+#  Windows, macOS (Apple Silicon et Intel) et Linux, sans Python pour
+#  l'utilisateur. Gratuit pour un dépôt public GitHub.
+#
+#  • Publier une version : créer une étiquette « v1.0.0 » (ou une Release
+#    sur github.com) → les 4 paquets sont attachés automatiquement.
+#  • Essai manuel : onglet Actions › « Construire » › Run workflow
+#    (paquets téléchargeables dans « Artifacts »).
+# =====================================================================
+name: Construire
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  construire:
+    name: ${{ matrix.nom }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest,  nom: Windows }
+          - { os: macos-latest,    nom: macOS-AppleSilicon }
+          - { os: macos-15-intel,  nom: macOS-Intel }
+          - { os: ubuntu-22.04,    nom: Linux-x86_64 }
+    runs-on: ${{ matrix.os }}
+    env:
+      # Signature + notarisation Apple : secrets du dépôt (Settings › Secrets and variables › Actions).
+      # S'ils sont absents, l'app Mac est construite sans signature (avec avertissement).
+      MAC_CERT_P12: ${{ secrets.MAC_CERT_P12 }}
+      MAC_CERT_MDP: ${{ secrets.MAC_CERT_MDP }}
+      MAC_SIGNATURE: ${{ secrets.MAC_SIGNATURE }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      APPLE_MDP_APP: ${{ secrets.APPLE_MDP_APP }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Certificat Apple (trousseau temporaire)
+        if: runner.os == 'macOS' && env.MAC_CERT_P12 != ''
+        run: |
+          KC="$RUNNER_TEMP/construction.keychain-db"
+          KC_MDP="$(uuidgen)"
+          echo "$MAC_CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$KC_MDP" "$KC"
+          security set-keychain-settings -lut 21600 "$KC"
+          security unlock-keychain -p "$KC_MDP" "$KC"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KC" -P "$MAC_CERT_MDP" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KC_MDP" "$KC" >/dev/null
+          security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
+          rm -f "$RUNNER_TEMP/cert.p12"
+
+      - name: Dépendances
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r empaquetage/requirements-construction.txt
+
+      - name: Construction + auto-test
+        env:
+          PYTHONIOENCODING: utf-8
+          PYTHONUTF8: "1"
+        run: python empaquetage/construire.py --suffixe ${{ matrix.nom }}
+
+      - name: Paquet (téléchargeable depuis l'onglet Actions)
+        uses: actions/upload-artifact@v4
+        with:
+          name: EclipseStudio-${{ matrix.nom }}
+          path: dist/paquets/*
+
+      - name: Attacher à la Release
+        # Mac sans certificat configuré : on n'attache rien (le .dmg signé et
+        # notarisé construit sur le Mac de l'auteur ne doit pas être remplacé)
+        if: startsWith(github.ref, 'refs/tags/v') && (runner.os != 'macOS' || env.MAC_CERT_P12 != '')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/paquets/*
+          generate_release_notes: true
+
+  kit-portable:
+    name: Kit portable (3 systèmes)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Fabrication du kit
+        run: python empaquetage/kit_portable.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: EclipseStudio-portable
+          path: dist/paquets/*
+      - name: Attacher à la Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/paquets/*

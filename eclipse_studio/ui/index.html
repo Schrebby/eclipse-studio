@@ -1,0 +1,823 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later — © 2026 Jérémy BEAUFRERE — JEREMiA -->
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Éclipse Studio</title>
+<!--
+=====================================================================
+ Éclipse Studio — INTERFACE (100 % locale, aucune ressource externe)
+ Étapes : 1. Images → 2. Alignement → 3. Lune & couleurs → 4. Rendu → 5. Export
+=====================================================================
+-->
+<style>
+/* ---------- 1. Thème (sombre, adapté à l'astro) ---------- */
+:root{
+  --fond:#0d0f14; --panneau:#151922; --panneau2:#1b2030; --bord:#262c3d;
+  --texte:#e6e8ee; --doux:#9aa3b5; --accent:#ffb347; --accent2:#ff7a3d;
+  --ok:#5fd38a; --alerte:#ffcc4d; --erreur:#ff6b6b; --bleu:#6fb7ff;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--fond);color:var(--texte);
+  font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Ubuntu,sans-serif}
+button,input,select{font:inherit;color:inherit}
+a{color:var(--bleu)}
+/* ---------- 2. Mise en page ---------- */
+.app{display:grid;grid-template-columns:380px 1fr;grid-template-rows:56px 1fr;height:100vh}
+header{grid-column:1/3;display:flex;align-items:center;gap:16px;padding:0 18px;border-bottom:1px solid var(--bord);background:#10131a}
+header h1{font-size:17px;margin:0;font-weight:650;letter-spacing:.2px}
+header h1 span{color:var(--accent)}
+.marque{display:flex;align-items:center;gap:12px}
+.marque img{display:block;height:38px;width:auto;opacity:.92;transition:opacity .15s}
+.marque a:hover img{opacity:1}
+.marque .btn{text-decoration:none;color:var(--texte)}
+.tache{flex:1;display:flex;align-items:center;gap:10px;min-width:0}
+.barre{flex:1;max-width:420px;height:8px;background:var(--panneau2);border-radius:5px;overflow:hidden}
+.barre i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent2),var(--accent));transition:width .3s}
+.tache .txt{color:var(--doux);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}
+aside{overflow-y:auto;border-right:1px solid var(--bord);background:var(--panneau)}
+main{display:flex;flex-direction:column;min-width:0;min-height:0}
+/* ---------- 3. Étapes ---------- */
+.etape{border-bottom:1px solid var(--bord)}
+.etape>summary{list-style:none;cursor:pointer;padding:13px 16px;display:flex;align-items:center;gap:10px;font-weight:600}
+.etape>summary::-webkit-details-marker{display:none}
+.num{width:22px;height:22px;border-radius:50%;background:var(--panneau2);display:grid;place-items:center;font-size:12px;color:var(--doux);flex:none}
+.etape.fait .num{background:var(--ok);color:#06210f}
+.etape .corps{padding:4px 16px 16px}
+.champ{margin:9px 0}
+.champ label{display:block;font-size:12px;color:var(--doux);margin-bottom:3px}
+.ligne{display:flex;gap:8px;align-items:center}
+.ligne>*{flex:1}
+input[type=text],input[type=number],select{width:100%;background:var(--panneau2);border:1px solid var(--bord);border-radius:7px;padding:7px 9px}
+input[type=range]{width:100%;accent-color:var(--accent)}
+input[type=checkbox]{accent-color:var(--accent)}
+.curseur{display:grid;grid-template-columns:118px 1fr 46px;gap:8px;align-items:center;margin:5px 0;font-size:13px}
+.curseur span:last-child{text-align:right;color:var(--doux);font-variant-numeric:tabular-nums}
+.case{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}
+.btn{background:var(--panneau2);border:1px solid var(--bord);border-radius:8px;padding:8px 12px;cursor:pointer}
+.btn:hover{border-color:#3a4360}
+.btn.principal{background:linear-gradient(180deg,var(--accent),var(--accent2));color:#1d1206;border:none;font-weight:650}
+.btn.principal:disabled{opacity:.45;cursor:not-allowed}
+.btn.petit{padding:4px 8px;font-size:12px}
+.info{background:var(--panneau2);border-radius:8px;padding:9px 11px;font-size:13px;color:var(--doux);margin:8px 0}
+.info b{color:var(--texte);font-weight:600}
+.grille2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.exports a{display:block;font-size:12px;padding:3px 0;word-break:break-all}
+.sous{font-size:12px;color:var(--doux);margin:14px 0 4px;text-transform:uppercase;letter-spacing:.6px}
+/* ---------- 4. Visionneuse ---------- */
+/* L'image est positionnée en absolu dans la zone : elle ne peut jamais déborder
+   sur les commandes, quelle que soit sa taille réelle */
+.vue{flex:1;display:grid;place-items:center;min-height:0;position:relative;overflow:hidden;background:#06070a}
+.vue img{position:absolute;inset:8px;width:calc(100% - 16px);height:calc(100% - 16px);object-fit:contain;image-rendering:auto}
+main{overflow:hidden}
+.commandes,.graphes,.journal{flex:none}
+.avert{background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.45);color:#ffd2d2}
+/* ---------- Carte de localisation ---------- */
+.carte{position:relative;height:260px;border-radius:9px;overflow:hidden;border:1px solid var(--bord);background:#0b1220;cursor:crosshair;touch-action:none}
+.carte canvas{position:absolute;inset:0;width:100%;height:100%}
+.carte .tuiles{position:absolute;inset:0;overflow:hidden}
+.carte .tuiles img{position:absolute;width:256px;height:256px;user-select:none;-webkit-user-drag:none;pointer-events:none}
+.carte-zoom{position:absolute;right:6px;top:6px;display:flex;flex-direction:column;gap:4px;z-index:3}
+.carte-zoom .btn{width:28px;padding:2px 0;background:rgba(20,24,34,.9)}
+.carte-attrib{position:absolute;right:4px;bottom:2px;font-size:10px;color:#cfd6e4;background:rgba(0,0,0,.45);padding:0 4px;border-radius:3px;z-index:3}
+.recherche{position:relative;margin-bottom:6px}
+.suggestions{position:absolute;left:0;right:0;top:100%;z-index:10;background:var(--panneau2);border:1px solid var(--bord);border-radius:8px;display:none;max-height:240px;overflow-y:auto}
+.suggestions div{padding:6px 10px;cursor:pointer;font-size:13px}
+.suggestions div:hover{background:#262d42}
+.suggestions small{color:var(--doux)}
+table.circ{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
+table.circ td{padding:2px 4px;border-top:1px solid var(--bord)}
+table.circ td.non{color:var(--erreur)}
+.vide{color:var(--doux);text-align:center;max-width:460px;padding:20px}
+.vide b{color:var(--accent)}
+.badge{position:absolute;top:12px;left:12px;background:rgba(10,12,18,.8);border:1px solid var(--bord);border-radius:20px;padding:4px 11px;font-size:12px}
+.commandes{display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--bord);background:var(--panneau)}
+.commandes input[type=range]{flex:1}
+.etiquette{min-width:250px;font-size:13px;color:var(--doux);font-variant-numeric:tabular-nums}
+.graphes{height:120px;border-top:1px solid var(--bord);background:var(--panneau);position:relative}
+.graphes canvas{width:100%;height:100%;display:block}
+.journal{height:110px;overflow-y:auto;border-top:1px solid var(--bord);background:#0a0c11;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;color:#aab3c5;padding:6px 12px;white-space:pre-wrap}
+.onglets{display:flex;gap:4px;margin-left:auto}
+.onglets .btn.actif{border-color:var(--accent);color:var(--accent)}
+/* ---------- 5. Explorateur de dossiers ---------- */
+dialog{background:var(--panneau);color:var(--texte);border:1px solid var(--bord);border-radius:12px;width:min(720px,92vw);padding:0}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+.dl-tete{padding:12px 16px;border-bottom:1px solid var(--bord);display:flex;gap:8px;align-items:center}
+.dl-liste{height:380px;overflow-y:auto;padding:6px}
+.dl-liste div{padding:6px 10px;border-radius:6px;cursor:pointer;display:flex;justify-content:space-between}
+.dl-liste div:hover{background:var(--panneau2)}
+.dl-pied{padding:12px 16px;border-top:1px solid var(--bord);display:flex;gap:8px;justify-content:space-between;align-items:center}
+.puce{font-size:11px;color:var(--doux)}
+@media (max-width:900px){.app{grid-template-columns:1fr;grid-template-rows:56px auto 1fr}aside{max-height:45vh}header{grid-column:1}}
+</style>
+</head>
+<body>
+<div class="app">
+<!-- ================= EN-TÊTE ================= -->
+<header>
+  <h1>☀ Éclipse <span>Studio</span></h1>
+  <div class="tache">
+    <div class="barre"><i id="barre"></i></div>
+    <div class="txt" id="tache-txt">Prêt</div>
+    <button class="btn petit" id="btn-annuler" style="display:none">Interrompre</button>
+  </div>
+  <div class="marque">
+    <span class="puce" id="version"></span>
+    <a id="lien-site" href="https://jerem-ia.fr" target="_blank" rel="noopener" title="JEREMiA — jerem-ia.fr"><img src="/logo" alt="JEREMiA — IA solutions" height="38"></a>
+    <a id="lien-licence" class="puce" href="/licence" target="_blank" rel="noopener" title="Logiciel libre et gratuit — licence GNU GPL v3" style="text-decoration:none;color:inherit">Logiciel libre · GPL-3.0</a>
+    <a id="lien-contact" class="btn petit" href="mailto:contact@jerem-ia.fr?subject=%C3%89clipse%20Studio" title="Écrire à contact@jerem-ia.fr">✉ Contact</a>
+    <button class="btn petit" id="btn-quitter" title="Arrêter Éclipse Studio">⏻ Quitter</button>
+  </div>
+</header>
+
+<!-- ================= PANNEAU LATÉRAL ================= -->
+<aside>
+  <!-- ---- Étape 1 : images ---- -->
+  <details class="etape" id="e1" open>
+    <summary><span class="num">1</span>Images de l'éclipse</summary>
+    <div class="corps">
+      <div class="champ"><label>Dossier des photos</label>
+        <div class="ligne"><input type="text" id="dossier-images" placeholder="/chemin/vers/les/photos"><button class="btn" style="flex:none" data-parcourir="dossier-images">Parcourir…</button></div>
+      </div>
+      <div class="ligne">
+        <div class="champ"><label>Format à utiliser</label><select id="extension"><option value="">Tous</option></select></div>
+        <div class="champ"><label>Nom contient</label><input type="text" id="filtre" placeholder="ex. IMG_"></div>
+      </div>
+      <div class="champ"><label>Dossier du projet (cache, exports)</label>
+        <div class="ligne"><input type="text" id="dossier-projet"><button class="btn" style="flex:none" data-parcourir="dossier-projet">…</button></div>
+      </div>
+      <div class="sous">Options d'analyse</div>
+      <div class="champ"><label>Type d'éclipse</label><select id="pa-type_eclipse">
+        <option value="auto">Automatique (d'après la date des photos)</option>
+        <option value="solaire">Éclipse de Soleil</option><option value="lunaire">Éclipse de Lune</option></select></div>
+      <div class="grille2">
+        <div class="champ"><label>Diamètre du disque (px)</label><input type="number" id="pa-diametre_cache" min="300" max="3000" step="50"></div>
+        <div class="champ"><label>1 image sur</label><input type="number" id="pa-pas" min="1" max="50"></div>
+        <div class="champ"><label>RAW demi-résolution</label><select id="pa-raw_demi"><option value="auto">Auto</option><option value="oui">Oui (rapide)</option><option value="non">Non</option></select></div>
+        <div class="champ"><label>Cœurs (0 = auto)</label><input type="number" id="pa-processus" min="0" max="64"></div>
+      </div>
+      <label class="case"><input type="checkbox" id="pa-couleur"> Garder la couleur</label>
+      <label class="case"><input type="checkbox" id="pa-aplatissement"> Corriger l'aplatissement (Soleil bas)</label>
+      <div class="ligne" style="margin-top:10px">
+        <button class="btn principal" id="btn-analyser">Analyser et aligner</button>
+        <button class="btn" id="btn-ouvrir" style="flex:none">Ouvrir un projet…</button>
+      </div>
+      <div class="info" id="info-rawpy" style="display:none"></div>
+    </div>
+  </details>
+
+  <!-- ---- Étape 2 : alignement ---- -->
+  <details class="etape" id="e2">
+    <summary><span class="num">2</span>Alignement</summary>
+    <div class="corps">
+      <div class="info" id="info-alignement">Lancez l'analyse.</div>
+      <label class="case"><input type="checkbox" id="vue-controle"> Vue de contrôle (cercle détecté, points du limbe)</label>
+      <div class="ligne"><button class="btn petit" id="btn-exclure">Exclure / réintégrer l'image affichée</button></div>
+      <div class="puce" style="margin-top:8px">Le graphe du bas montre la trajectoire du Soleil sur le capteur (x en orange, y en bleu) : chaque point = une image.</div>
+    </div>
+  </details>
+
+  <!-- ---- Étape 3 : Lune et uniformisation ---- -->
+  <details class="etape" id="e3">
+    <summary><span class="num">3</span>Lune, rotation &amp; couleurs</summary>
+    <div class="corps">
+      <div class="sous" style="margin-top:4px">Lieu d'observation — cliquez sur la carte</div>
+      <div class="recherche">
+        <input type="text" id="lieu-recherche" placeholder="Rechercher une ville, un site…" autocomplete="off">
+        <div class="suggestions" id="lieu-suggestions"></div>
+      </div>
+      <div class="carte" id="carte"><canvas id="carte-canvas"></canvas>
+        <div class="carte-zoom"><button class="btn petit" id="carte-plus">+</button><button class="btn petit" id="carte-moins">−</button></div>
+        <div class="carte-attrib" id="carte-attrib">© OpenStreetMap</div></div>
+      <div class="ligne" style="margin:6px 0"><button class="btn petit" id="btn-gps">📍 Position GPS des photos</button><span class="puce" id="carte-mode"></span></div>
+      <div class="grille2">
+        <div class="champ"><label>Latitude (° N)</label><input type="number" id="pm-latitude" step="0.0001" placeholder="47.664"></div>
+        <div class="champ"><label>Longitude (° E, Ouest négatif)</label><input type="number" id="pm-longitude" step="0.0001" placeholder="-3.205"></div>
+        <div class="champ"><label>Décalage heure appareil / UTC</label><input type="number" id="pm-decalage_utc_h" step="0.5" placeholder="auto"></div>
+        <div class="champ"><label>Monture</label><select id="pm-monture">
+          <option value="auto">Auto (rotation mesurée)</option><option value="equatoriale">Équatoriale parfaite</option><option value="altaz">Altazimutale / trépied</option></select></div>
+      </div>
+      <div class="champ"><label>Trajectoire de la Lune</label><select id="pm-trajectoire">
+        <option value="auto">Auto (éphémérides si lieu connu)</option><option value="ephemerides">Éphémérides</option><option value="polynome">Ajustement des mesures</option></select></div>
+      <div class="sous">Uniformisation (coucher de soleil, nuages)</div>
+      <div class="champ"><select id="pm-uniformisation">
+        <option value="complete">Complète : exposition + couleur + contraste + gradient</option>
+        <option value="couleur">Exposition + couleur</option>
+        <option value="exposition">Exposition seule</option>
+        <option value="aucune">Aucune</option></select></div>
+      <div class="grille2">
+        <div class="champ"><label>Teinte du Soleil</label><select id="pm-teinte_cible">
+          <option value="naturelle">Naturelle (moyenne)</option><option value="neutre">Blanc neutre</option><option value="chaude">Chaude (couchant)</option><option value="origine">Couleurs d'origine</option></select></div>
+        <div class="champ"><label>Lissage (images)</label><input type="number" id="pm-lissage_photometrique" min="1" max="31" step="2"></div>
+      </div>
+      <label class="case"><input type="checkbox" id="pm-effacer_poussieres"> Effacer les poussières du capteur (taches fixes sur le capteur, pas les taches solaires)</label>
+      <button class="btn principal" id="btn-modeliser" style="width:100%;margin-top:8px">Calculer Lune + Soleil de référence</button>
+      <div class="info" id="info-modele" style="display:none"></div>
+      <div class="sous">Visibilité depuis ce lieu</div>
+      <div class="info" id="info-circonstances">Choisissez un lieu sur la carte.</div>
+    </div>
+  </details>
+
+  <!-- ---- Étape 4 : rendu ---- -->
+  <details class="etape" id="e4">
+    <summary><span class="num">4</span>Rendu &amp; colorisation</summary>
+    <div class="corps">
+      <div class="champ"><label>Palette</label><select id="pr-palette"></select></div>
+      <div class="champ" id="champ-perso" style="display:none"><label>Couleur personnalisée</label><input type="color" id="couleur-perso" value="#ff8a2a"></div>
+      <div id="options-lune" style="display:none">
+        <div class="champ"><label>Luminosité de la Lune (éclipse lunaire)</label><select id="pr-lumiere_lune">
+          <option value="hdr">HDR : pleine Lune et ombre rouge visibles</option>
+          <option value="reelle">Réelle : la totalité devient très sombre</option>
+          <option value="compensee">Compensée : luminosité constante</option></select></div>
+        <div class="curseur"><span>Révéler l'ombre</span><input type="range" id="hdr-curseur" min="1" max="5" step="0.05"><span id="v-hdr"></span></div>
+      </div>
+      <div id="curseurs"></div>
+      <div class="sous">Cadrage</div>
+      <div class="grille2">
+        <div class="champ"><label>Taille vidéo (px)</label><select id="pr-taille"><option>720</option><option>1080</option><option>1440</option><option>2160</option></select></div>
+        <div class="champ"><label>Images / s</label><input type="number" id="pr-fps" min="1" max="60"></div>
+      </div>
+      <label class="case"><input type="checkbox" id="pr-miroir_h"> Miroir horizontal</label>
+      <label class="case"><input type="checkbox" id="pr-miroir_v"> Miroir vertical</label>
+      <div class="sous">Reconstitution</div>
+      <label class="case"><input type="checkbox" id="pr-reconstituer_coupes"> Compléter les soleils coupés</label>
+      <label class="case"><input type="checkbox" id="pr-synthese_debut_fin"> Recréer le début et la fin de l'éclipse</label>
+      <label class="case"><input type="checkbox" id="pr-combler_trous"> Combler les trous (nuages épais)</label>
+      <div class="champ"><label>Disque plein avant 1er / après dernier contact (s)</label><input type="number" id="pr-marge_synthese_s" min="0" max="1800" step="30"></div>
+      <div class="champ"><label>Rythme des images recréées (s entre deux images)</label><input type="number" id="pr-cadence_synthese_s" min="0.2" max="600" step="0.1" placeholder="auto"></div>
+      <div class="puce" id="info-cadence"></div>
+      <div class="champ"><label>Lissage temporel (images moyennées)</label><input type="number" id="pr-lissage_temporel" min="1" max="15"></div>
+      <div class="sous">Incrustations</div>
+      <label class="case"><input type="checkbox" id="pr-inc_heure"> Heure</label>
+      <label class="case"><input type="checkbox" id="pr-inc_obscuration"> Obscuration (%)</label>
+      <label class="case"><input type="checkbox" id="pr-inc_reconstitue"> Mention « reconstitution »</label>
+      <div class="grille2">
+        <div class="champ"><label>Titre</label><input type="text" id="pr-inc_titre"></div>
+        <div class="champ"><label>Crédit</label><input type="text" id="pr-inc_credit" placeholder="© JEREMiA"></div>
+        <div class="champ"><label>Heure affichée : UTC +</label><input type="number" id="pr-fuseau_affichage_h" step="0.5" placeholder="vide = UT"></div>
+      </div>
+    </div>
+  </details>
+
+  <!-- ---- Étape 5 : export ---- -->
+  <details class="etape" id="e5">
+    <summary><span class="num">5</span>Exporter</summary>
+    <div class="corps">
+      <div class="grille2">
+        <button class="btn principal" data-export="video">Vidéo MP4</button>
+        <button class="btn" data-export="gif">GIF animé</button>
+        <button class="btn" data-export="planche">Planche des phases</button>
+        <button class="btn" data-export="frise">Frise</button>
+        <button class="btn" data-export="png16">Séquence PNG 16 bits</button>
+        <button class="btn" data-export="tiff16">Séquence TIFF 16 bits</button>
+        <button class="btn" data-export="jpeg">Séquence JPEG</button>
+        <button class="btn" data-export="csv">Mesures (CSV)</button>
+      </div>
+      <button class="btn" id="btn-dossier-exports" style="width:100%;margin-top:8px">Ouvrir le dossier des exports</button>
+      <div class="exports" id="liste-exports"></div>
+    </div>
+  </details>
+</aside>
+
+<!-- ================= VISIONNEUSE ================= -->
+<main>
+  <div class="vue" id="vue">
+    <div class="vide" id="vide">Choisissez le dossier de vos photos d'éclipse puis lancez <b>Analyser et aligner</b>.<br><br>
+      Formats : JPEG, PNG, TIFF, FITS, RAW (CR2, CR3, NEF, ARW, RAF, ORF, DNG…)</div>
+    <img id="image" alt="" style="display:none">
+    <div class="badge" id="badge" style="display:none"></div>
+  </div>
+  <div class="commandes">
+    <button class="btn" id="btn-lecture" title="Lecture / pause">▶</button>
+    <input type="range" id="curseur-temps" min="0" max="0" value="0">
+    <div class="etiquette" id="etiquette">—</div>
+    <div class="onglets"><button class="btn petit actif" data-onglet="graphes">Graphes</button><button class="btn petit" data-onglet="journal">Journal</button></div>
+  </div>
+  <div class="graphes" id="graphes"><canvas id="canvas"></canvas></div>
+  <div class="journal" id="journal" style="display:none"></div>
+</main>
+</div>
+
+<!-- ================= EXPLORATEUR ================= -->
+<dialog id="explorateur">
+  <div class="dl-tete"><select id="dl-racines" style="width:200px"></select><input type="text" id="dl-chemin"></div>
+  <div class="dl-liste" id="dl-liste"></div>
+  <div class="dl-pied"><span class="puce" id="dl-info"></span>
+    <div class="ligne" style="flex:none"><button class="btn" id="dl-annuler">Annuler</button><button class="btn principal" id="dl-choisir">Choisir ce dossier</button></div></div>
+</dialog>
+
+<script>
+"use strict";
+/* =====================================================================
+   1. OUTILS
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+const api = async (url, corps) => {
+  const r = await fetch(url, corps === undefined ? {} : {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(corps)});
+  const j = await r.json();
+  if (!r.ok || j.erreur) throw new Error(j.erreur || r.statusText);
+  return j;
+};
+const alerte = e => { console.error(e); window.alert(e.message || e); };
+let ETAT = null, CHRONO = [], IMAGES = [], DEFAUTS = null, lecture = null, minuteurApercu = null, DERNIERE_ERREUR = "";
+
+/* Curseurs de développement (clé, libellé, min, max, pas) */
+const CURSEURS = [
+  ["point_noir", "Point noir", 0, 0.5, 0.005], ["point_blanc", "Point blanc", 0.3, 1.6, 0.01],
+  ["gamma", "Gamma", 0.3, 3, 0.05], ["contraste", "Contraste", -1, 1, 0.05],
+  ["saturation", "Saturation", 0, 2.5, 0.05], ["accentuation", "Accentuation", 0, 4, 0.1],
+  ["rayon_accentuation", "Rayon accent.", 0.5, 12, 0.5], ["aplanir_limbe", "Aplanir le limbe", 0, 1, 0.05],
+  ["marge", "Marge autour", 0.05, 1.2, 0.05], ["rotation", "Rotation (°)", -180, 180, 1],
+];
+
+/* =====================================================================
+   2. PARAMÈTRES ⇄ FORMULAIRE
+   ===================================================================== */
+function construireCurseurs() {
+  $("curseurs").innerHTML = CURSEURS.map(([k, l, mi, ma, pa]) =>
+    `<div class="curseur"><span>${l}</span><input type="range" id="pr-${k}" min="${mi}" max="${ma}" step="${pa}"><span id="v-${k}"></span></div>`).join("");
+  CURSEURS.forEach(([k]) => $("pr-" + k).addEventListener("input", () => { $("v-" + k).textContent = $("pr-" + k).value; apercuDiffere(); }));
+}
+function remplir(prefixe, params) {
+  for (const [k, v] of Object.entries(params || {})) {
+    const el = $(prefixe + k);
+    if (!el) continue;
+    if (el.type === "checkbox") el.checked = !!v;
+    else el.value = (v === null || v === undefined) ? "" : v;
+    if ($("v-" + k)) $("v-" + k).textContent = v;
+  }
+}
+function lire(prefixe, modele) {
+  const o = {};
+  for (const k of Object.keys(modele)) {
+    const el = $(prefixe + k);
+    if (!el) continue;
+    if (el.type === "checkbox") o[k] = el.checked;
+    else if (el.type === "number" || el.type === "range") o[k] = el.value === "" ? null : Number(el.value);
+    else o[k] = el.value;
+  }
+  return o;
+}
+function paramsRendu() {
+  const p = lire("pr-", DEFAUTS.rendu);
+  p.taille = Number($("pr-taille").value);
+  if (p.palette === "perso") p.palette = $("couleur-perso").value;
+  p.compression_hdr = Math.pow(10, -Number($("hdr-curseur").value || 3.7));
+  return p;
+}
+
+/* =====================================================================
+   3. ÉTAT ET RAFRAÎCHISSEMENT
+   ===================================================================== */
+let tacheActivePrec = false;
+async function rafraichir() {
+  try {
+    const e = await api("/api/etat");
+    const premier = ETAT === null;
+    ETAT = e;
+    if (premier) initialiser(e);
+    const t = e.tache;
+    $("barre").style.width = (t.actif ? 100 * t.progression : (t.erreur ? 0 : (t.nom ? 100 : 0))) + "%";
+    if (!t.actif && t.erreur && t.erreur !== "Interrompu" && t.erreur !== DERNIERE_ERREUR) {
+      DERNIERE_ERREUR = t.erreur;
+      const cible = t.nom === "Analyse" ? "info-alignement" : (t.nom === "Modélisation" ? "info-modele" : null);
+      if (cible) { $(cible).style.display = ""; $(cible).classList.add("avert"); $(cible).textContent = "⚠ " + t.erreur; $(t.nom === "Analyse" ? "e2" : "e3").open = true; }
+    }
+    $("tache-txt").textContent = t.actif ? `${t.nom} — ${t.texte}` : (t.erreur ? `${t.nom} : ${t.erreur}` : (t.nom ? `${t.nom} terminé ✔` : "Prêt"));
+    $("btn-annuler").style.display = t.actif ? "" : "none";
+    ["btn-analyser", "btn-modeliser"].forEach(id => $(id).disabled = t.actif);
+    document.querySelectorAll("[data-export]").forEach(b => b.disabled = t.actif || !e.projet);
+    const j = $("journal"); const bas = j.scrollTop + j.clientHeight >= j.scrollHeight - 5;
+    j.textContent = e.journal.join("\n"); if (bas) j.scrollTop = j.scrollHeight;
+    majProjet(e.projet);
+    if (tacheActivePrec && !t.actif) await chargerProjet();
+    tacheActivePrec = t.actif;
+  } catch (err) { $("tache-txt").textContent = "Serveur injoignable — relancez Éclipse Studio"; }
+}
+function initialiser(e) {
+  DEFAUTS = e.defauts;
+  $("version").textContent = "v" + e.version + (e.rawpy ? "" : " · RAW : aperçu intégré");
+  if (e.site) $("lien-site").href = e.site;
+  if (e.contact) { $("lien-contact").href = "mailto:" + e.contact + "?subject=%C3%89clipse%20Studio"; $("lien-contact").title = "Écrire à " + e.contact; }
+  if (!e.rawpy) { $("info-rawpy").style.display = ""; $("info-rawpy").innerHTML = "<b>rawpy</b> n'est pas installé : les RAW seront lus via leur aperçu JPEG intégré (qualité réduite). Relancez l'installateur pour l'ajouter."; }
+  $("pr-palette").innerHTML = e.palettes.map(p => `<option value="${p.id}">${p.nom}</option>`).join("") + `<option value="perso">Personnalisée…</option>`;
+  construireCurseurs();
+  remplir("pa-", DEFAUTS.analyse); remplir("pm-", DEFAUTS.modele); remplir("pr-", DEFAUTS.rendu);
+  if (e.projet) chargerProjet();
+}
+function majProjet(p) {
+  if (!p) return;
+  const s = p.stats || {}, f = p.forme;
+  $("e1").classList.toggle("fait", !!f);
+  $("e2").classList.toggle("fait", p.etape === "analyse" || p.etape === "modele");
+  $("e3").classList.toggle("fait", p.etape === "modele");
+  if (p.inexploitable) {
+    $("info-alignement").classList.add("avert");
+    $("info-alignement").textContent = "⚠ " + p.inexploitable;
+    $("e2").open = true;
+    document.querySelectorAll("[data-export]").forEach(b => b.disabled = true);
+    $("btn-modeliser").disabled = true;
+    $("image").style.display = "none"; $("vide").style.display = ""; $("vide").innerHTML = "<b>Série non exploitable</b><br><br>" + p.inexploitable;
+    return;
+  }
+  if (f) {
+    const ok = (s.ok || 0) + (s["ok-lune"] || 0), interp = s.interpole || 0, rej = (s.rejete || 0) + (s.echec || 0);
+    $("info-alignement").classList.remove("avert");
+    $("info-alignement").innerHTML = `<b>${p.nb_images}</b> images · <b style="color:var(--ok)">${ok}</b> alignées · <b style="color:var(--alerte)">${interp}</b> interpolées · <b style="color:var(--erreur)">${rej}</b> rejetées${s.exclu ? ` · ${s.exclu} exclues` : ""}<br>
+      Rayon solaire <b>${f.A.toFixed(1)} px</b> · aplatissement <b>${(100 * (1 - f.k)).toFixed(2)} %</b> · lecture <b>${f.methode}</b>`;
+  }
+  const m = p.modele;
+  const lun = (f && f.type === "lunaire") || (m && m.lunaire);
+  $("options-lune").style.display = lun ? "" : "none";
+  $("btn-modeliser").textContent = lun ? "Calculer l'ombre + Lune de référence" : "Calculer Lune + Soleil de référence";
+  if (f) $("info-alignement").innerHTML = $("info-alignement").innerHTML.replace("Rayon solaire", lun ? "Rayon lunaire" : "Rayon solaire");
+  if (m) {
+    const c = m.contacts || {};
+    const h = x => x ? `<b>${x}</b>` : "—";
+    const horloge = m.dt_horloge != null ? `<br>Horloge de l'appareil <b>${-m.dt_horloge >= 0 ? "en avance" : "en retard"} de ${Math.abs(m.dt_horloge / 60).toFixed(1)} min</b>` : "";
+    const rot = m.rotation_champ ? ` · rotation de champ corrigée <b>${m.rotation_champ.toFixed(2)}°/h</b>` : "";
+    $("info-modele").style.display = "";
+    $("info-modele").classList.toggle("avert", !m.mode);
+    if (!m.mode) {
+      $("info-modele").innerHTML = "<b>Trajectoire non calculée</b> : pas assez d'images où " +
+        (lun ? "le bord de l'ombre" : "le bord de la Lune") + " est mesurable de façon fiable. Les images réelles restent alignées, " +
+        "mais le début et la fin ne peuvent pas être recréés (voir le journal).";
+    } else if (lun) {
+      $("info-modele").innerHTML = `Ombre de la Terre : <b>${m.mode === "ephemerides" ? "éphémérides" : "ajustement"}</b> (écart ${(1000 * m.rms).toFixed(0)} ‰ du rayon lunaire)${rot}<br>
+        P1 ${h(c.P1)} · U1 ${h(c.U1)} · U2 ${h(c.U2)} · max ${h(c.max)} · U3 ${h(c.U3)} · U4 ${h(c.U4)} · P4 ${h(c.P4)}<br>
+        Magnitude de l'ombre <b>${(c.magnitude_ombre || 0).toFixed(3)}</b> · ombre = <b>${(m.rho_u || 0).toFixed(2)}</b> rayons lunaires` + horloge;
+    } else {
+      $("info-modele").innerHTML = `Trajectoire : <b>${m.mode === "ephemerides" ? "éphémérides" : "ajustement"}</b> (écart ${(1000 * m.rms).toFixed(1)} ‰ du rayon)${rot}<br>
+        Contacts : C1 ${h(c.C1)} · max ${h(c.max)} · C4 ${h(c.C4)}${c.C2 ? ` · C2 ${h(c.C2)} · C3 ${h(c.C3)}` : ""}<br>
+        Magnitude <b>${(c.magnitude || 0).toFixed(3)}</b> · obscuration max <b>${(100 * (c.obscuration_max || 0)).toFixed(1)} %</b> · Lune/Soleil <b>${(m.rho_m || 0).toFixed(4)}</b>` + horloge;
+    }
+  }
+  $("liste-exports").innerHTML = (p.exports || []).slice(0, 12).map(n =>
+    `<a href="/api/fichier?chemin=${encodeURIComponent(p.dossier + "/exports/" + n)}" target="_blank">${n}</a>`).join("");
+}
+async function chargerProjet() {
+  const p = ETAT && ETAT.projet; if (!p) return;
+  if (p.dossier_images) $("dossier-images").value = p.dossier_images;
+  $("dossier-projet").value = p.dossier;
+  remplir("pa-", p.params_analyse); remplir("pm-", p.params_modele); remplir("pr-", p.params_rendu);
+  majCurseurHdr(p.params_rendu.compression_hdr);
+  if (p.params_modele.latitude != null && p.params_modele.longitude != null) CARTE.placer(p.params_modele.latitude, p.params_modele.longitude, true);
+  if (p.params_rendu.palette && p.params_rendu.palette.startsWith("#")) { $("pr-palette").value = "perso"; $("couleur-perso").value = p.params_rendu.palette; $("champ-perso").style.display = ""; }
+  if (!p.forme || p.inexploitable) return;
+  IMAGES = await api("/api/images");
+  await chargerChrono();
+  dessinerGraphes();
+}
+async function chargerChrono() {
+  const rep = await api("/api/chronologie?p=" + encodeURIComponent(JSON.stringify(paramsRendu())));
+  CHRONO = rep.images;
+  $("pr-cadence_synthese_s").placeholder = `auto : ${rep.cadence.toFixed(2)} s (rythme de votre prise de vue)`;
+  $("info-cadence").textContent = `Votre prise de vue : une photo toutes les ${rep.cadence.toFixed(2)} s en moyenne. Laissez vide pour que le début et la fin recréés avancent exactement à ce rythme.`;
+  const c = $("curseur-temps");
+  c.max = Math.max(0, CHRONO.length - 1);
+  if (+c.value > +c.max) c.value = c.max;
+  afficher();
+}
+
+/* =====================================================================
+   4. VISIONNEUSE
+   ===================================================================== */
+let chargement = false, enAttente = false;
+function afficher() {
+  if (!CHRONO.length) return;
+  const k = +$("curseur-temps").value, e = CHRONO[k];
+  const ctrl = $("vue-controle").checked && e.type === "reel";
+  const taille = Math.min(1080, Math.max(480, Math.round(Math.min($("vue").clientWidth, $("vue").clientHeight) * devicePixelRatio)));
+  const url = ctrl ? `/api/controle?i=${e.i}&taille=${taille}` :
+    `/api/apercu?k=${k}&taille=${lecture ? Math.min(taille, 560) : taille}&p=${encodeURIComponent(JSON.stringify(paramsRendu()))}`;
+  const im = IMAGES[e.i] || {};
+  $("etiquette").textContent = `${k + 1}/${CHRONO.length} · ${e.heure}` + (e.type === "synth" ? " · reconstitution" : ` · ${im.nom || ""}`);
+  $("badge").style.display = ""; $("badge").textContent = e.type === "synth" ? "image de synthèse" : (ctrl ? "contrôle de détection" : (im.statut || ""));
+  if (chargement) { enAttente = true; return; }
+  chargement = true;
+  const img = $("image");
+  img.onload = img.onerror = () => { chargement = false; $("vide").style.display = "none"; img.style.display = ""; if (enAttente) { enAttente = false; afficher(); } dessinerGraphes(); if (lecture) lecture.suivant(); };
+  img.src = url;
+}
+function apercuDiffere() { clearTimeout(minuteurApercu); minuteurApercu = setTimeout(afficher, 120); }
+
+/* Lecture continue : on enchaîne dès que l'image précédente est affichée */
+function basculerLecture() {
+  if (lecture) { lecture = null; $("btn-lecture").textContent = "▶"; return; }
+  $("btn-lecture").textContent = "❚❚";
+  lecture = { suivant() { setTimeout(() => { if (!lecture) return; const c = $("curseur-temps"); c.value = (+c.value + 1) % (+c.max + 1); afficher(); }, 30); } };
+  lecture.suivant();
+}
+
+/* =====================================================================
+   5. GRAPHES (trajectoire du Soleil + obscuration)
+   ===================================================================== */
+function dessinerGraphes() {
+  const cv = $("canvas"), ctx = cv.getContext("2d");
+  const W = cv.clientWidth * devicePixelRatio, H = cv.clientHeight * devicePixelRatio;
+  cv.width = W; cv.height = H; ctx.clearRect(0, 0, W, H);
+  if (!IMAGES.length) return;
+  const pts = IMAGES.filter(i => i.cx != null);
+  const tmin = Math.min(...IMAGES.map(i => i.t)), tmax = Math.max(...IMAGES.map(i => i.t)) || 1;
+  const X = t => 40 * devicePixelRatio + (W - 60 * devicePixelRatio) * (t - tmin) / Math.max(1, tmax - tmin);
+  const serie = (cle, coul, haut, bas) => {
+    const v = pts.map(p => p[cle]).filter(x => x != null); if (!v.length) return;
+    const mi = Math.min(...v), ma = Math.max(...v), Y = x => bas - (bas - haut) * (x - mi) / Math.max(1e-9, ma - mi);
+    for (const p of pts) {
+      if (p[cle] == null) continue;
+      ctx.fillStyle = p.statut === "ok" ? coul : (p.statut === "interpole" ? "#ffcc4d" : "#ff6b6b");
+      if (p.exclu) ctx.fillStyle = "#555";
+      ctx.fillRect(X(p.t) - 1.5 * devicePixelRatio, Y(p[cle]) - 1.5 * devicePixelRatio, 3 * devicePixelRatio, 3 * devicePixelRatio);
+    }
+  };
+  const m = 10 * devicePixelRatio;
+  serie("cx", "#ffb347", m, H / 2 - m); serie("cy", "#6fb7ff", m, H / 2 - m);
+  serie("obscuration", "#c792ea", H / 2 + m, H - m);
+  ctx.fillStyle = "#9aa3b5"; ctx.font = `${11 * devicePixelRatio}px sans-serif`;
+  ctx.fillText("x / y", 4, m + 10 * devicePixelRatio); ctx.fillText("obsc.", 4, H / 2 + m + 10 * devicePixelRatio);
+  // Curseur de l'image affichée
+  const e = CHRONO[+$("curseur-temps").value];
+  if (e) { ctx.strokeStyle = "rgba(255,255,255,.5)"; ctx.beginPath(); ctx.moveTo(X(e.t), 0); ctx.lineTo(X(e.t), H); ctx.stroke(); }
+}
+
+/* =====================================================================
+   6. EXPLORATEUR DE DOSSIERS
+   ===================================================================== */
+let cibleExplorateur = null;
+async function explorer(chemin) {
+  try {
+    const r = await api("/api/parcourir", {chemin});
+    $("dl-chemin").value = r.chemin;
+    $("dl-racines").innerHTML = r.racines.map(x => `<option ${r.chemin.startsWith(x) ? "selected" : ""}>${x}</option>`).join("");
+    const lignes = [`<div data-ch="${encodeURIComponent(r.parent)}">⬆ Dossier parent</div>`]
+      .concat(r.dossiers.map(d => `<div data-ch="${encodeURIComponent(r.chemin + (r.chemin.endsWith("/") || r.chemin.endsWith("\\") ? "" : (r.chemin.includes("\\") ? "\\" : "/")) + d)}">📁 ${d}</div>`));
+    $("dl-liste").innerHTML = lignes.join("");
+    const nb = Object.entries(r.images).map(([k, v]) => `${v} ${k}`).join(", ");
+    $("dl-info").textContent = (nb ? "Images : " + nb : "Aucune image ici") + (r.projet ? " · projet Éclipse Studio" : "");
+    $("dl-liste").querySelectorAll("div").forEach(d => d.onclick = () => explorer(decodeURIComponent(d.dataset.ch)));
+  } catch (e) { alerte(e); }
+}
+async function choisirDossier() {
+  const ch = $("dl-chemin").value; $("explorateur").close();
+  if (cibleExplorateur === "ouvrir") {
+    try { await api("/api/ouvrir", {dossier_projet: ch}); ETAT = null; await rafraichir(); } catch (e) { alerte(e); }
+    return;
+  }
+  $(cibleExplorateur).value = ch;
+  if (cibleExplorateur === "dossier-images") {
+    if (!$("dossier-projet").value) $("dossier-projet").value = ch.replace(/[\/\\]$/, "") + "_EclipseStudio";
+    const r = await api("/api/parcourir", {chemin: ch});
+    const ext = Object.entries(r.images).sort((a, b) => b[1] - a[1]);
+    $("extension").innerHTML = `<option value="">Tous (${ext.reduce((s, x) => s + x[1], 0)})</option>` + ext.map(([k, v]) => `<option value="${k}">${k} (${v})</option>`).join("");
+    const raw = ext.find(([k]) => [".cr2", ".cr3", ".nef", ".arw", ".raf", ".orf", ".rw2", ".dng"].includes(k));
+    if (ext.length > 1) $("extension").value = (raw || ext[0])[0];
+  }
+}
+
+/* =====================================================================
+   7. ACTIONS
+   ===================================================================== */
+function brancher() {
+  document.querySelectorAll("[data-parcourir]").forEach(b => b.onclick = () => { cibleExplorateur = b.dataset.parcourir; $("explorateur").showModal(); explorer($(b.dataset.parcourir).value || ""); });
+  $("btn-ouvrir").onclick = () => { cibleExplorateur = "ouvrir"; $("explorateur").showModal(); explorer($("dossier-projet").value || ""); };
+  $("dl-annuler").onclick = () => $("explorateur").close();
+  $("dl-choisir").onclick = choisirDossier;
+  $("dl-chemin").onkeydown = e => { if (e.key === "Enter") explorer($("dl-chemin").value); };
+  $("dl-racines").onchange = () => explorer($("dl-racines").value);
+  $("btn-annuler").onclick = () => api("/api/annuler", {});
+  /* Quitter : arrête le serveur local puis affiche un message de fin */
+  $("btn-quitter").onclick = async () => {
+    const enCours = $("btn-annuler").style.display !== "none";
+    if (enCours && !confirm("Un traitement est en cours. Il reprendra au prochain lancement. Quitter quand même ?")) return;
+    try { await api("/api/quitter", {}); } catch (e) {}
+    document.body.innerHTML = '<div style="display:flex;height:100vh;align-items:center;justify-content:center;flex-direction:column;gap:8px;font-family:system-ui;color:#ccc;background:#0b0e14"><div style="font-size:42px">☀</div><div>Éclipse Studio est fermé. Vous pouvez fermer cet onglet.</div></div>';
+  };
+  $("btn-analyser").onclick = async () => {
+    try {
+      if (!$("dossier-images").value) throw new Error("Choisissez le dossier des photos.");
+      if (!$("dossier-projet").value) $("dossier-projet").value = $("dossier-images").value.replace(/[\/\\]$/, "") + "_EclipseStudio";
+      await api("/api/analyser", {dossier_images: $("dossier-images").value, dossier_projet: $("dossier-projet").value,
+        extension: $("extension").value, filtre: $("filtre").value, params_analyse: lire("pa-", DEFAUTS.analyse)});
+      $("e2").open = true;
+    } catch (e) { alerte(e); }
+  };
+  $("btn-modeliser").onclick = async () => {
+    try { await api("/api/modeliser", {params_modele: lire("pm-", DEFAUTS.modele)}); } catch (e) { alerte(e); }
+  };
+  document.querySelectorAll("[data-export]").forEach(b => b.onclick = async () => {
+    try { await api("/api/exporter", {type: b.dataset.export, params_rendu: paramsRendu(), options: {}}); } catch (e) { alerte(e); }
+  });
+  $("btn-dossier-exports").onclick = () => api("/api/ouvrir_dossier", {}).catch(alerte);
+  $("btn-exclure").onclick = async () => {
+    const e = CHRONO[+$("curseur-temps").value]; if (!e || e.type !== "reel") return;
+    try { await api("/api/exclure", {i: e.i, exclu: !IMAGES[e.i].exclu}); IMAGES = await api("/api/images"); await chargerChrono(); } catch (err) { alerte(err); }
+  };
+  $("curseur-temps").oninput = afficher;
+  $("btn-lecture").onclick = basculerLecture;
+  $("vue-controle").onchange = afficher;
+  $("pr-palette").onchange = () => { $("champ-perso").style.display = $("pr-palette").value === "perso" ? "" : "none"; afficher(); };
+  $("couleur-perso").oninput = apercuDiffere;
+  // Tout changement de rendu : aperçu ; options de chronologie : recalcul de la frise temporelle
+  document.querySelectorAll("[id^=pr-]").forEach(el => el.addEventListener("change", async () => {
+    if (!ETAT || !ETAT.projet || !ETAT.projet.forme) return;
+    api("/api/params_rendu", paramsRendu()).catch(() => {});
+    if (["pr-synthese_debut_fin", "pr-combler_trous", "pr-marge_synthese_s", "pr-cadence_synthese_s"].includes(el.id)) await chargerChrono(); else afficher();
+  }));
+  document.querySelectorAll("[data-onglet]").forEach(b => b.onclick = () => {
+    document.querySelectorAll("[data-onglet]").forEach(x => x.classList.toggle("actif", x === b));
+    $("graphes").style.display = b.dataset.onglet === "graphes" ? "" : "none";
+    $("journal").style.display = b.dataset.onglet === "journal" ? "" : "none";
+    dessinerGraphes();
+  });
+  document.addEventListener("keydown", e => {
+    if (e.target.tagName === "INPUT" && e.target.type !== "range") return;
+    const c = $("curseur-temps");
+    if (e.key === "ArrowRight") { c.value = Math.min(+c.max, +c.value + 1); afficher(); }
+    if (e.key === "ArrowLeft") { c.value = Math.max(0, +c.value - 1); afficher(); }
+    if (e.key === " ") { e.preventDefault(); basculerLecture(); }
+  });
+  window.addEventListener("resize", dessinerGraphes);
+}
+/* =====================================================================
+   8. CARTE DE LOCALISATION (sans bibliothèque externe)
+   - En ligne : fond OpenStreetMap (tuiles chargées par le navigateur).
+   - Hors-ligne : quadrillage + ~600 villes et repères embarqués.
+   Projection Web-Mercator, glisser pour déplacer, molette / +− pour zoomer,
+   clic pour placer le lieu d'observation.
+   ===================================================================== */
+const CARTE = (() => {
+  const T = 256;
+  let zoom = 5, cx = 0, cy = 0, larg = 0, haut = 0;   // centre en pixels monde au zoom courant
+  let marqueur = null, hors_ligne = false, echecs = 0, succes = 0, points = [];
+  const cont = () => $("carte"), cv = () => $("carte-canvas");
+  let couche = null;
+  const versPx = (lat, lon, z) => {
+    const s = T * Math.pow(2, z), la = Math.max(-85, Math.min(85, lat)) * Math.PI / 180;
+    return [(lon + 180) / 360 * s, (1 - Math.log(Math.tan(la) + 1 / Math.cos(la)) / Math.PI) / 2 * s];
+  };
+  const versGeo = (x, y, z) => {
+    const s = T * Math.pow(2, z), n = Math.PI - 2 * Math.PI * y / s;
+    return [180 / Math.PI * Math.atan(Math.sinh(n)), x / s * 360 - 180];
+  };
+  function dimensionner() {
+    const r = cont().getBoundingClientRect(); larg = r.width; haut = r.height;
+    cv().width = larg * devicePixelRatio; cv().height = haut * devicePixelRatio;
+  }
+  function tuiles() {
+    if (!couche) { couche = document.createElement("div"); couche.className = "tuiles"; cont().insertBefore(couche, cv()); }
+    if (hors_ligne) { couche.innerHTML = ""; return; }
+    const n = Math.pow(2, zoom), x0 = Math.floor((cx - larg / 2) / T), x1 = Math.floor((cx + larg / 2) / T);
+    const y0 = Math.max(0, Math.floor((cy - haut / 2) / T)), y1 = Math.min(n - 1, Math.floor((cy + haut / 2) / T));
+    const voulues = new Set();
+    for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) {
+      const xx = ((x % n) + n) % n, cle = `${zoom}/${xx}/${y}`;
+      voulues.add(cle + "@" + x);
+      let im = couche.querySelector(`img[data-k="${cle}@${x}"]`);
+      if (!im) {
+        im = document.createElement("img"); im.dataset.k = cle + "@" + x;
+        im.onload = () => { succes++; };
+        im.onerror = () => { echecs++; if (succes === 0 && echecs > 3) { hors_ligne = true; dessiner(); } };
+        im.src = `https://tile.openstreetmap.org/${cle}.png`;
+        couche.appendChild(im);
+      }
+      im.style.left = (x * T - cx + larg / 2) + "px"; im.style.top = (y * T - cy + haut / 2) + "px";
+    }
+    couche.querySelectorAll("img").forEach(im => { if (!voulues.has(im.dataset.k)) im.remove(); });
+  }
+  function dessiner() {
+    if (!larg) dimensionner();
+    tuiles();
+    const c = cv().getContext("2d"), d = devicePixelRatio;
+    c.setTransform(d, 0, 0, d, 0, 0); c.clearRect(0, 0, larg, haut);
+    $("carte-attrib").style.display = hors_ligne ? "none" : "";
+    $("carte-mode").textContent = hors_ligne ? "Carte hors-ligne (fond détaillé si Internet)" : "";
+    if (hors_ligne) {
+      c.fillStyle = "#0b1220"; c.fillRect(0, 0, larg, haut);
+      // Quadrillage (pas adapté au zoom)
+      const pas = zoom <= 3 ? 30 : zoom <= 5 ? 10 : zoom <= 7 ? 5 : zoom <= 9 ? 1 : 0.25;
+      c.strokeStyle = "rgba(120,150,200,.18)"; c.lineWidth = 1; c.fillStyle = "rgba(160,180,220,.55)"; c.font = "10px sans-serif";
+      for (let lo = -180; lo <= 180; lo += pas) { const [x] = versPx(0, lo, zoom); const X = x - cx + larg / 2; if (X < 0 || X > larg) continue; c.beginPath(); c.moveTo(X, 0); c.lineTo(X, haut); c.stroke(); c.fillText(lo + "°", X + 2, haut - 4); }
+      for (let la = -80; la <= 80; la += pas) { const [, y] = versPx(la, 0, zoom); const Y = y - cy + haut / 2; if (Y < 0 || Y > haut) continue; c.beginPath(); c.moveTo(0, Y); c.lineTo(larg, Y); c.stroke(); c.fillText(la + "°", 2, Y - 2); }
+      // Villes et repères embarqués
+      for (const [la, lo, nom] of points) {
+        const [x, y] = versPx(la, lo, zoom), X = x - cx + larg / 2, Y = y - cy + haut / 2;
+        if (X < -5 || Y < -5 || X > larg + 5 || Y > haut + 5) continue;
+        c.fillStyle = "#7fb0ff"; c.beginPath(); c.arc(X, Y, 2.2, 0, 7); c.fill();
+        if (zoom >= 6) { c.fillStyle = "rgba(220,230,250,.85)"; c.fillText(nom, X + 4, Y + 3); }
+      }
+    }
+    if (marqueur) {
+      const [x, y] = versPx(marqueur[0], marqueur[1], zoom), X = x - cx + larg / 2, Y = y - cy + haut / 2;
+      c.fillStyle = "#ff7a3d"; c.strokeStyle = "#fff"; c.lineWidth = 2;
+      c.beginPath(); c.moveTo(X, Y); c.arc(X, Y - 14, 7, Math.PI * 0.8, Math.PI * 2.2); c.closePath(); c.fill(); c.stroke();
+      c.fillStyle = "#fff"; c.beginPath(); c.arc(X, Y - 14, 2.5, 0, 7); c.fill();
+    }
+  }
+  function centrer(lat, lon, z) { if (z != null) zoom = z; [cx, cy] = versPx(lat, lon, zoom); dessiner(); }
+  function zoomer(dz, px, py) {
+    const nz = Math.max(1, Math.min(17, zoom + dz)); if (nz === zoom) return;
+    px = px ?? larg / 2; py = py ?? haut / 2;
+    const [la, lo] = versGeo(cx - larg / 2 + px, cy - haut / 2 + py, zoom);
+    zoom = nz; const [x, y] = versPx(la, lo, zoom);
+    cx = x - px + larg / 2; cy = y - py + haut / 2; if (couche) couche.innerHTML = ""; dessiner();
+  }
+  let rappel = null;
+  function placer(lat, lon, notifier = true, z = null) {
+    marqueur = [lat, lon]; centrer(lat, lon, z ?? Math.max(zoom, 8));
+    if (notifier && rappel) rappel(lat, lon);
+  }
+  function init(cb) {
+    rappel = cb; dimensionner(); centrer(46.5, 2.5, 5);
+    api("/api/lieux_carte").then(p => { points = p; dessiner(); }).catch(() => {});
+    let glisse = null;
+    cont().addEventListener("pointerdown", e => { if (e.target.closest(".carte-zoom")) return; glisse = {x: e.clientX, y: e.clientY, cx, cy, bouge: false}; cont().setPointerCapture(e.pointerId); });
+    cont().addEventListener("pointermove", e => {
+      if (!glisse) return; const dx = e.clientX - glisse.x, dy = e.clientY - glisse.y;
+      if (Math.abs(dx) + Math.abs(dy) > 4) glisse.bouge = true;
+      cx = glisse.cx - dx; cy = glisse.cy - dy; dessiner();
+    });
+    cont().addEventListener("pointerup", e => {
+      if (glisse && !glisse.bouge) {
+        const r = cont().getBoundingClientRect();
+        const [la, lo] = versGeo(cx - larg / 2 + (e.clientX - r.left), cy - haut / 2 + (e.clientY - r.top), zoom);
+        marqueur = [la, ((lo + 540) % 360) - 180]; dessiner(); if (rappel) rappel(marqueur[0], marqueur[1]);
+      }
+      glisse = null;
+    });
+    cont().addEventListener("wheel", e => { e.preventDefault(); const r = cont().getBoundingClientRect(); zoomer(e.deltaY < 0 ? 1 : -1, e.clientX - r.left, e.clientY - r.top); }, {passive: false});
+    $("carte-plus").onclick = () => zoomer(1); $("carte-moins").onclick = () => zoomer(-1);
+    new ResizeObserver(() => { dimensionner(); dessiner(); }).observe(cont());
+  }
+  return {init, placer, dessiner};
+})();
+
+/* ---- Lieu choisi : champs, fuseau, visibilité de l'éclipse ---- */
+let minuteurLieu = null;
+function lieuChoisi(lat, lon) {
+  $("pm-latitude").value = lat.toFixed(4); $("pm-longitude").value = lon.toFixed(4);
+  clearTimeout(minuteurLieu); minuteurLieu = setTimeout(() => majCirconstances(lat, lon), 250);
+}
+async function majCirconstances(lat, lon) {
+  $("info-circonstances").textContent = "Calcul de l'éclipse vue depuis ce lieu…";
+  try {
+    const [fz, c] = await Promise.all([api(`/api/fuseau?lat=${lat}&lon=${lon}`), api(`/api/circonstances?lat=${lat}&lon=${lon}`)]);
+    // Décalage horaire des photos : proposé automatiquement si non renseigné (EXIF = heure locale)
+    const p = ETAT && ETAT.projet, fits = p && p.forme && String(p.forme.methode || "").startsWith("fits");
+    if ($("pm-decalage_utc_h").value === "" && !fits && fz.decalage_h != null) $("pm-decalage_utc_h").value = fz.decalage_h;
+    if (!c.trouve) { $("info-circonstances").innerHTML = `Fuseau <b>${fz.tz}</b> (UTC${fz.decalage_h >= 0 ? "+" : ""}${fz.decalage_h}). Aucune éclipse visible d'ici à ±20 jours de la date des photos.`; return; }
+    const titre = c.type === "lunaire" ? "Éclipse de Lune" : "Éclipse de Soleil";
+    const mag = c.type === "lunaire" ? `magnitude de l'ombre ${(c.infos.magnitude_ombre || 0).toFixed(3)} (${c.infos.type})` : `magnitude ${(c.infos.magnitude || 0).toFixed(3)} vue d'ici`;
+    const astre = c.type === "lunaire" ? "Lune" : "Soleil";
+    $("info-circonstances").innerHTML = `<b>${titre} du ${c.date_locale}</b> — ${mag}<br>Fuseau <b>${fz.tz}</b> (UTC${fz.decalage_h >= 0 ? "+" : ""}${fz.decalage_h})
+      <table class="circ"><tr><td></td><td>Heure locale</td><td>Hauteur ${astre}</td></tr>` +
+      c.lignes.map(l => `<tr><td>${l.nom}</td><td><b>${l.local}</b></td><td class="${l.visible ? "" : "non"}">${l.hauteur == null ? "—" : l.hauteur + "°"}${l.visible ? "" : " (sous l'horizon)"}</td></tr>`).join("") + "</table>";
+  } catch (e) { $("info-circonstances").textContent = "Calcul impossible : " + e.message; }
+}
+/* ---- Recherche de lieux : liste embarquée + Nominatim (OpenStreetMap) si Internet ---- */
+let minuteurRecherche = null;
+async function rechercherLieu() {
+  const q = $("lieu-recherche").value.trim(), box = $("lieu-suggestions");
+  if (q.length < 2) { box.style.display = "none"; return; }
+  let res = [];
+  try { res = (await api("/api/lieux?q=" + encodeURIComponent(q))).map(v => ({nom: v.nom, info: v.pays, lat: v.lat, lon: v.lon})); } catch (e) {}
+  try {
+    const ctl = new AbortController(); setTimeout(() => ctl.abort(), 2500);
+    const r = await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=6&accept-language=fr&q=" + encodeURIComponent(q), {signal: ctl.signal});
+    if (r.ok) for (const v of await r.json()) res.push({nom: v.display_name.split(",")[0], info: v.display_name.split(",").slice(1, 3).join(","), lat: +v.lat, lon: +v.lon});
+  } catch (e) { /* hors-ligne : liste embarquée seulement */ }
+  box.innerHTML = res.slice(0, 12).map((v, k) => `<div data-k="${k}">${v.nom} <small>${v.info || ""} · ${v.lat.toFixed(2)}, ${v.lon.toFixed(2)}</small></div>`).join("") || "<div><small>Aucun résultat</small></div>";
+  box.style.display = "block";
+  box.querySelectorAll("[data-k]").forEach(d => d.onclick = () => { const v = res[+d.dataset.k]; box.style.display = "none"; $("lieu-recherche").value = v.nom; CARTE.placer(v.lat, v.lon, true, 11); });
+}
+function majCurseurHdr(c) {
+  const v = -Math.log10(c || 2e-4); $("hdr-curseur").value = v; $("v-hdr").textContent = v.toFixed(1);
+}
+function brancherCarte() {
+  CARTE.init(lieuChoisi);
+  $("lieu-recherche").oninput = () => { clearTimeout(minuteurRecherche); minuteurRecherche = setTimeout(rechercherLieu, 300); };
+  document.addEventListener("click", e => { if (!e.target.closest(".recherche")) $("lieu-suggestions").style.display = "none"; });
+  ["pm-latitude", "pm-longitude"].forEach(id => $(id).addEventListener("change", () => {
+    const la = parseFloat($("pm-latitude").value), lo = parseFloat($("pm-longitude").value);
+    if (isFinite(la) && isFinite(lo)) CARTE.placer(la, lo, true);
+  }));
+  $("btn-gps").onclick = async () => {
+    try {
+      const g = await api("/api/gps" + (ETAT && ETAT.projet ? "" : "?dossier=" + encodeURIComponent($("dossier-images").value)));
+      if (g.lat == null) return alerte(new Error("Aucune position GPS dans les métadonnées des photos (appareil sans GPS ou géolocalisation désactivée)."));
+      CARTE.placer(g.lat, g.lon, true, 12);
+    } catch (e) { alerte(e); }
+  };
+  $("hdr-curseur").oninput = () => { $("v-hdr").textContent = (+$("hdr-curseur").value).toFixed(1); apercuDiffere(); };
+  $("hdr-curseur").onchange = () => api("/api/params_rendu", paramsRendu()).catch(() => {});
+  majCurseurHdr(2e-4);
+  $("e3").addEventListener("toggle", () => setTimeout(() => CARTE.dessiner(), 50));
+}
+brancherCarte();
+
+brancher();
+rafraichir();
+setInterval(rafraichir, 1000);
+</script>
+</body>
+</html>

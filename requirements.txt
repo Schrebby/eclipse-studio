@@ -1,0 +1,9 @@
+# Éclipse Studio — dépendances (toutes gratuites et open source)
+numpy>=1.23
+opencv-python-headless>=4.7
+pillow>=10.0
+imageio-ffmpeg>=0.4.9
+# Lecture des RAW (CR2, CR3, NEF, ARW…). Facultatif : sans lui, l'aperçu JPEG intégré est utilisé.
+rawpy>=0.19
+# Fuseaux horaires sous Windows (macOS et Linux les ont déjà)
+tzdata>=2024.1

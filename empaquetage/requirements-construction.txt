@@ -1,0 +1,8 @@
+# Éclipse Studio — dépendances pour CONSTRUIRE les versions installables
+pyinstaller>=6.10
+numpy>=1.23
+opencv-python-headless>=4.7
+pillow>=10.0
+imageio-ffmpeg>=0.4.9
+rawpy>=0.19
+tzdata>=2024.1

@@ -1,0 +1,17 @@
+# Environnements et constructions
+.venv/
+build/
+dist/
+__pycache__/
+*.pyc
+*.spec
+# Fichiers de contrôle temporaires
+_controle*.png
+_diag*.png
+_dbg*.png
+.DS_Store
+.venv-construction/
+# Dossiers personnels (démo, fichiers à trier) et vidéos lourdes
+Démo*/
+_a_supprimer/
+*.mp4
