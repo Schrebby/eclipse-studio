@@ -15,3 +15,4 @@ _dbg*.png
 Démo*/
 _a_supprimer/
 *.mp4
+.venv-intel/
